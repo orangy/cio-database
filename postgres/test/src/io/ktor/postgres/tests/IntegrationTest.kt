@@ -30,10 +30,30 @@ class IntegrationTest {
                 ConsolePostgresWireMonitor()
 
             ).use { connection ->
-                repeat(10) {
-                    connection.simpleQuery("SELECT $it")
-                    yield()
-                }
+                /*
+                                connection.sendSimpleQuery("SELECT 0")
+                                connection.sendSimpleQuery("SELECT 'Hello, World!'")
+                */
+                connection.sendParse("stmt", "SELECT $1", intArrayOf(PostgresType.getType("int4").oid))
+                connection.sendBind(
+                    "",
+                    "stmt",
+                    arrayOf(byteArrayOf(0x30, 0x31, 0x32, 0x33)),
+                    inParametersFormats = intArrayOf(1),
+                    outParametersFormats = intArrayOf(1)
+                )
+                connection.sendDescribePortal("")
+                connection.sendExecute("")
+                connection.sendBind(
+                    "",
+                    "stmt",
+                    arrayOf(byteArrayOf(0x12, 0x34, 0x56, 0x78)),
+                    inParametersFormats = intArrayOf(1),
+                    outParametersFormats = intArrayOf(1)
+                )
+                connection.sendDescribePortal("")
+                connection.sendExecute("")
+                connection.sendSync()
                 delay(100)
             }
         }

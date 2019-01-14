@@ -5,7 +5,8 @@ import kotlinx.io.charsets.*
 import kotlinx.io.core.*
 
 internal suspend fun ByteWriteChannel.writePostgresPacket(type: FrontendMessage, block: BytePacketBuilder.() -> Unit) {
-    if (type.code != 0.toChar()) writeByte(type.code.toByte())
+    if (type.code != 0.toChar())
+        writeByte(type.code.toByte())
     val packet = buildPacket { block() }
 
     writeInt(4 + packet.remaining)

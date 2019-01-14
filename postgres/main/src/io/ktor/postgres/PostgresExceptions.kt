@@ -1,6 +1,6 @@
 package io.ktor.postgres
 
-abstract class PostgresException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+open class PostgresException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
 
 class PostgresWireProtocolException(message: String, cause: Throwable? = null) : PostgresException(message, cause)
 class PostgresAuthenticationException(message: String, cause: Throwable? = null) : PostgresException(message, cause)

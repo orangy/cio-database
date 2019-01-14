@@ -16,7 +16,7 @@ interface PostgresWireMonitor {
     fun receivedGeneric(type: String)
     fun receivedComplete(info: String)
     fun receivedDescription(count: Int)
-    fun receivedDescriptionRow(
+    fun receivedDescriptionColumn(
         index: Int,
         name: String,
         tableOID: Int,
@@ -30,6 +30,13 @@ interface PostgresWireMonitor {
     fun receivedRow(count: Int)
     fun receivedRowCell(index: Int, bytes: ByteArray?)
     fun receivedEmptyResponse()
+    fun sentParse(statementName: String, query: String, parametersTypeOIDs: IntArray)
+    fun sentGeneric(type: String)
+    fun sentBind(portalName: String, statementName: String)
+    fun sentExecute(portalName: String, maxRows: Int)
+    fun sentDescribePortal(portalName: String)
+    fun sentDescribeStatement(statementName: String)
+    fun sentSync()
 }
 
 class ConsolePostgresWireMonitor() : TextPostgresWireMonitor() {
@@ -40,13 +47,21 @@ class ConsolePostgresWireMonitor() : TextPostgresWireMonitor() {
 
 abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
     abstract fun text(message: String)
-    
+
     private fun received(message: String) {
         text("<- $message")
     }
 
     private fun sent(message: String) {
         text("-> $message")
+    }
+
+    override fun receivedGeneric(type: String) {
+        received("$type (…)")
+    }
+
+    override fun sentGeneric(type: String) {
+        sent("$type (…)")
     }
 
     override fun sentQuery(query: String) {
@@ -83,10 +98,11 @@ abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
     override fun receivedAuthenticateCleartext() {
         received("AUTHENTICATION_REQUEST: Clear text requested")
     }
+
     override fun sentAuthenticatePassword() {
         sent("AUTHENTICATION_REQUEST: Sent password: ***")
     }
-    
+
     override fun sentAuthenticateMD5() {
         sent("AUTHENTICATION_REQUEST: Sent MD5")
     }
@@ -103,23 +119,20 @@ abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
         sent("TERMINATE")
     }
 
-    override fun receivedGeneric(type: String) {
-        received("$type (…)")
-    }
-    
+
     override fun receivedComplete(info: String) {
         received("COMMAND_COMPLETE: $info")
-    }
-
-    override fun receivedDescription(count: Int) {
-        received("ROW_DESCRIPTION: $count column(s)")
     }
 
     override fun receivedEmptyResponse() {
         received("EMPTY_QUERY_RESPONSE")
     }
 
-    override fun receivedDescriptionRow(
+    override fun receivedDescription(count: Int) {
+        received("ROW_DESCRIPTION: $count column(s)")
+    }
+
+    override fun receivedDescriptionColumn(
         index: Int,
         name: String,
         tableOID: Int,
@@ -130,7 +143,19 @@ abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
         format: Int
     ) {
         val type = PostgresType.findType(typeOID)
-        received("ROW_DESCRIPTION [#$index]: $name Table:$tableOID, Attribute:$attributeID, Type:${type?.name ?: typeOID}, Mod: $typeMod, Size: $typeSize, Format: $format")
+        received(
+            buildString {
+                append("ROW_DESCRIPTION [#$index]: '$name' : ")
+                append("${type?.name ?: typeOID}")
+                if (typeMod != -1) {
+                    append(" mod:$typeMod")
+                }
+                append(" {$typeSize bytes, ${if (format == 0) "text" else "binary"}}")
+                if (tableOID != 0) {
+                    append("Table [$tableOID:$attributeID] ")
+                }
+            }
+        )
     }
 
     override fun receivedRow(count: Int) {
@@ -139,5 +164,34 @@ abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
 
     override fun receivedRowCell(index: Int, bytes: ByteArray?) {
         received("DATA_ROW [#$index]: ${bytes?.toHexString(10)}")
+    }
+
+    override fun sentParse(statementName: String, query: String, parametersTypeOIDs: IntArray) {
+        sent("PARSE $statementName(${parametersTypeOIDs.map {
+            PostgresType.findType(it)?.name ?: it
+        }.joinToString()}), Query: $query")
+    }
+
+    override fun sentBind(portalName: String, statementName: String) {
+        sent("BIND $portalName from $statementName")
+    }
+
+    override fun sentExecute(portalName: String, maxRows: Int) {
+        if (maxRows > 0)
+            sent("EXECUTE $portalName (max: $maxRows)")
+        else
+            sent("EXECUTE $portalName")
+    }
+
+    override fun sentDescribePortal(portalName: String) {
+        sent("DESCRIBE PORTAL $portalName")
+    }
+
+    override fun sentDescribeStatement(statementName: String) {
+        sent("DESCRIBE STATEMENT $statementName")
+    }
+
+    override fun sentSync() {
+        sent("SYNC")
     }
 }

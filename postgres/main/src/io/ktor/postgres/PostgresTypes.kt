@@ -8,23 +8,37 @@ data class PostgresType(
 
 ) {
     companion object {
-        private val types: Array<PostgresType?>
+        private val oidToType: Array<PostgresType?>
+        private val nameToType: Map<String, PostgresType>
 
         init {
             val maxOid = rawTypes.maxBy { it.oid }!!.oid
             val dictionary = rawTypes.associateBy { it.oid }
-            types = Array(maxOid) { index ->
+            oidToType = Array(maxOid) { index ->
                 dictionary[index]?.let { rawType ->
                     PostgresType(rawType.oid, rawType.typname, rawType.typlen, rawType.descr)
                 }
             }
+            nameToType = oidToType.filterNotNull().associateBy { it.name }
+        }
+
+        fun findType(name: String): PostgresType? {
+            return nameToType[name]
+        }
+
+        fun getType(name: String): PostgresType {
+            return nameToType[name] ?: throw PostgresException("Type with name $name is not known.")
+        }
+
+        fun getType(oid: Int): PostgresType {
+            return findType(oid) ?: throw PostgresException("Type with OID $oid is not known.")
         }
 
         fun findType(oid: Int): PostgresType? {
             require(oid >= 0) { "Type OID should be non-negative, but was $oid" }
-            if (oid >= types.size)
+            if (oid >= oidToType.size)
                 return null
-            return types[oid]
+            return oidToType[oid]
         }
     }
 }
