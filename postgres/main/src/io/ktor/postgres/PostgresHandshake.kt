@@ -56,39 +56,6 @@ suspend fun Socket.handshake(
     }
 }
 
-suspend fun ByteWriteChannel.respondAuthenticate(
-    payload: ByteReadPacket,
-    username: String,
-    password: String?,
-    monitor: PostgresWireMonitor?
-): Unit? {
-    val authType = AuthenticationType.fromCode(payload.readInt())
-    return when (authType) {
-        AuthenticationType.OK -> {
-            monitor?.receivedAuthenticated()
-        }
-        AuthenticationType.CLEARTEXT_PASSWORD -> {
-            monitor?.receivedAuthenticateCleartext()
-            if (password == null)
-                throw PostgresAuthenticationException("Password was not provided for clear text authentication.")
-            respondAuthPlainText(password)
-            monitor?.sentAuthenticatePassword()
-        }
-        AuthenticationType.MD5_PASSWORD -> {
-            if (password == null)
-                throw PostgresAuthenticationException("Password was not provided for MD5 authentication.")
-            if (payload.remaining != 4L)
-                throw PostgresAuthenticationException("MD5 salt size is invalid: expected 4 bytes, received ${payload.remaining}.")
-
-            val salt = payload.readBytes(4)
-            monitor?.receivedAuthenticateMD5(salt)
-            respondAuthMD5(username, password, salt)
-            monitor?.sentAuthenticateMD5()
-        }
-        else -> throw PostgresAuthenticationException("Unsupported auth format: $authType")
-    }
-}
-
 suspend fun ByteWriteChannel.sendStartup(
     username: String,
     database: String,
