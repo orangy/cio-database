@@ -1,0 +1,63 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'kotlin'
+
+    group 'io.ktor'
+    version '0.1'
+
+    repositories {
+        mavenLocal()
+        maven { url 'https://dl.bintray.com/kotlin/kotlin-eap' }
+        maven { url "https://dl.bintray.com/ktorio/ktor" }
+        maven { url "https://dl.bintray.com/kotlin/kotlinx" }
+        maven { url 'https://dl.bintray.com/palantir/releases' }
+        mavenCentral()
+    }
+
+    sourceSets.all {
+        kotlin.setSrcDirs(["$name/src"])
+        java.setSrcDirs(["$name/src"])
+        resources.setSrcDirs(["$name/resources"])
+    }
+
+    dependencies {
+        api 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.11'
+        api 'org.jetbrains.kotlin:kotlin-reflect:1.3.11'
+        api 'org.slf4j:slf4j-api:1.7.25'
+
+        api "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines"
+        implementation "org.jetbrains.kotlinx:kotlinx-coroutines-debug:$kotlinx_coroutines"
+        implementation "io.ktor:ktor-network:$ktor_version"
+
+        testImplementation 'org.jetbrains.kotlin:kotlin-test-junit:1.3.11'
+        testImplementation 'junit:junit:4.12'
+
+        testImplementation "com.palantir.docker.compose:docker-compose-rule-junit4:$docker_compose_rule_junit"
+        testImplementation "ch.qos.logback:logback-classic:$logback_version"
+    }
+
+    task packageSources(type: Jar) {
+        classifier = 'sources'
+        from(sourceSets.main.allSource)
+    }
+
+    sourceCompatibility = '1.8'
+    compileKotlin {
+        kotlinOptions.jvmTarget = "1.8"
+    }
+    compileTestKotlin {
+        kotlinOptions.jvmTarget = "1.8"
+    }
+
+    artifacts.archives(tasks.packageSources)
+}
