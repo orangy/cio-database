@@ -129,7 +129,8 @@ abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
         typeMod: Int,
         format: Int
     ) {
-        received("ROW_DESCRIPTION [#$index]: $name Table:$tableOID, Attribute:$attributeID, Type:$typeOID, Mod: $typeMod, Size: $typeSize, Format: $format")
+        val type = PostgresType.findType(typeOID)
+        received("ROW_DESCRIPTION [#$index]: $name Table:$tableOID, Attribute:$attributeID, Type:${type?.name ?: typeOID}, Mod: $typeMod, Size: $typeSize, Format: $format")
     }
 
     override fun receivedRow(count: Int) {
