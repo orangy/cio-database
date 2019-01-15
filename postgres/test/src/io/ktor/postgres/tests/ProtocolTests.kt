@@ -1,14 +1,27 @@
 package io.ktor.postgres.tests
 
+import io.ktor.network.sockets.*
 import io.ktor.postgres.*
+import kotlinx.coroutines.*
 import org.junit.Test
 import kotlin.test.*
 
 class ProtocolTests : IntegrationTestBase() {
+
+    fun withReceivingConnection(monitor: PostgresWireMonitor? = null, body: suspend PostgresConnection.() -> Unit) =
+        withConnection(monitor) {
+            launch {
+                while (!socket.isClosed) {
+                    input.receiveMessage(monitor)
+                }
+            }
+            body()
+        }
+
     @Test
     fun simpleQueryInt() {
         val monitor = TestPostgresWireMonitor()
-        withConnection(monitor) {
+        withReceivingConnection(monitor) {
             sendSimpleQuery("SELECT 0")
         }
         assertEquals(
@@ -28,7 +41,7 @@ class ProtocolTests : IntegrationTestBase() {
     @Test
     fun simpleQueryString() {
         val monitor = TestPostgresWireMonitor()
-        withConnection(monitor) {
+        withReceivingConnection(monitor) {
             sendSimpleQuery("SELECT 'Hello!'")
         }
         assertEquals(
@@ -48,18 +61,24 @@ class ProtocolTests : IntegrationTestBase() {
     @Test
     fun simpleQueryMultiple() {
         val monitor = TestPostgresWireMonitor()
-        withConnection(monitor) {
-            sendSimpleQuery("SELECT 42, 'Hello!'")
+        withReceivingConnection(monitor) {
+            sendSimpleQuery("SELECT 44")
+            sendSimpleQuery("SELECT 'Hello!'")
         }
         assertEquals(
             """
--> QUERY: SELECT 42, 'Hello!'
-<- ROW_DESCRIPTION: 2 column(s)
+-> QUERY: SELECT 44
+-> QUERY: SELECT 'Hello!'
+<- ROW_DESCRIPTION: 1 column(s)
 <- ROW_DESCRIPTION [#0]: '?column?' : int4 {4 bytes, text}
-<- ROW_DESCRIPTION [#1]: '?column?' : text {-1 bytes, text}
-<- DATA_ROW: 2 cell(s)
-<- DATA_ROW [#0]: 3432
-<- DATA_ROW [#1]: 48656c6c6f21
+<- DATA_ROW: 1 cell(s)
+<- DATA_ROW [#0]: 3434
+<- COMMAND_COMPLETE: SELECT 1
+<- READY_FOR_QUERY: IDLE
+<- ROW_DESCRIPTION: 1 column(s)
+<- ROW_DESCRIPTION [#0]: '?column?' : text {-1 bytes, text}
+<- DATA_ROW: 1 cell(s)
+<- DATA_ROW [#0]: 48656c6c6f21
 <- COMMAND_COMPLETE: SELECT 1
 <- READY_FOR_QUERY: IDLE
 -> TERMINATE
@@ -70,7 +89,7 @@ class ProtocolTests : IntegrationTestBase() {
     @Test
     fun preparedStatementTest() {
         val monitor = TestPostgresWireMonitor()
-        withConnection(monitor) {
+        withReceivingConnection(monitor) {
             sendParse("stmt", "SELECT $1", intArrayOf(PostgresType.getType("int4").oid))
             sendDescribeStatement("stmt")
             sendBind(
