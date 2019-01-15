@@ -59,7 +59,7 @@ class ProtocolTests : IntegrationTestBase() {
     }
 
     @Test
-    fun simpleQueryMultiple() {
+    fun simpleQueryPipeline() {
         val monitor = TestPostgresWireMonitor()
         withReceivingConnection(monitor) {
             sendSimpleQuery("SELECT 44")
@@ -75,6 +75,31 @@ class ProtocolTests : IntegrationTestBase() {
 <- DATA_ROW [#0]: 3434
 <- COMMAND_COMPLETE: SELECT 1
 <- READY_FOR_QUERY: IDLE
+<- ROW_DESCRIPTION: 1 column(s)
+<- ROW_DESCRIPTION [#0]: '?column?' : text {-1 bytes, text}
+<- DATA_ROW: 1 cell(s)
+<- DATA_ROW [#0]: 48656c6c6f21
+<- COMMAND_COMPLETE: SELECT 1
+<- READY_FOR_QUERY: IDLE
+-> TERMINATE
+        """.trimIndent(), monitor.result().trim()
+        )
+    }
+    
+    @Test
+    fun simpleQueryMultiple() {
+        val monitor = TestPostgresWireMonitor()
+        withReceivingConnection(monitor) {
+            sendSimpleQuery("SELECT 44; SELECT 'Hello!'")
+        }
+        assertEquals(
+            """
+-> QUERY: SELECT 44; SELECT 'Hello!'
+<- ROW_DESCRIPTION: 1 column(s)
+<- ROW_DESCRIPTION [#0]: '?column?' : int4 {4 bytes, text}
+<- DATA_ROW: 1 cell(s)
+<- DATA_ROW [#0]: 3434
+<- COMMAND_COMPLETE: SELECT 1
 <- ROW_DESCRIPTION: 1 column(s)
 <- ROW_DESCRIPTION [#0]: '?column?' : text {-1 bytes, text}
 <- DATA_ROW: 1 cell(s)
