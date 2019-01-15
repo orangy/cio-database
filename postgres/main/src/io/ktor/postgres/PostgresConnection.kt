@@ -4,6 +4,7 @@ import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.network.sockets.Socket
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
 import kotlinx.coroutines.io.*
 import java.net.*
 import kotlin.coroutines.*
@@ -24,6 +25,20 @@ class PostgresConnection(
         }
         monitor?.sentTerminate()
         socket.close()
+    }
+
+    private val receiveActor = actor<(suspend (ByteReadChannel) -> Any?)>(start = CoroutineStart.LAZY) {
+        for (reader in channel) {
+            reader(input)
+        }
+    }
+
+    suspend fun <T> receiveAsync(function: suspend (ByteReadChannel) -> T): Deferred<T> {
+        val deferred = CompletableDeferred<T>()
+        receiveActor.send {
+            deferred.complete(function(it))
+        }
+        return deferred
     }
 
     companion object {
