@@ -32,6 +32,7 @@ class SimpleQuerySequenceMonitor : GuardedWireMonitor() {
         complete = false
         names.fill(null)
         types.fill(null)
+        datas.fill(null)
     }
 
     override fun receivedComplete(info: String) {
