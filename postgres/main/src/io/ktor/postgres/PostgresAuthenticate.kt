@@ -9,9 +9,9 @@ suspend fun ByteWriteChannel.respondAuthenticationRequest(
     username: String,
     password: String?,
     monitor: PostgresWireMonitor?
-): Unit? {
+) {
     val authType = AuthenticationType.fromCode(payload.readInt())
-    return when (authType) {
+    when (authType) {
         AuthenticationType.OK -> {
             monitor?.receivedAuthenticated()
         }
