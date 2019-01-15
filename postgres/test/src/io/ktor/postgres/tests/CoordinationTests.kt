@@ -2,6 +2,7 @@ package io.ktor.postgres.tests
 
 import io.ktor.postgres.*
 import kotlinx.coroutines.*
+import kotlinx.io.pool.*
 import org.junit.*
 
 class CoordinationTests : IntegrationTestBase() {
@@ -9,26 +10,10 @@ class CoordinationTests : IntegrationTestBase() {
     fun simpleQuery() {
         val monitor = ConsolePostgresWireMonitor()
         withConnection(monitor) {
-            val result1 = executeQueryAsync("SELECT 1,'Hello!'") { receiver ->
-                repeat(receiver.columns) { index ->
-                    val name = receiver.names[index]
-                    val typeName = receiver.types[index]?.name
-                    val bytes = receiver.datas[index]
-                    println("$name: $typeName = ${bytes?.let { String(it) }}")
-                }
-                receiver.datas[1]?.let { String(it) }
-            }
-            val result2 = executeQueryAsync("SELECT 2,'Bye!'") { receiver ->
-                repeat(receiver.columns) { index ->
-                    val name = receiver.names[index]
-                    val typeName = receiver.types[index]?.name
-                    val bytes = receiver.datas[index]
-                    println("$name: $typeName = ${bytes?.let { String(it) }}")
-                }
-                receiver.datas[1]?.let { String(it) }
-            }
-            val results = awaitAll(result1, result2)
-            println(results)
+            val list = List(10) {
+                executeQueryAsync("SELECT $it, 'Item #$it'")
+            }.awaitAll()
+            println(list)
         }
     }
 }
@@ -37,6 +22,7 @@ class CoordinationTests : IntegrationTestBase() {
 class SimpleQuerySequenceMonitor : GuardedWireMonitor() {
     var complete = false
 
+    // TODO: handle multiple result sets for batched queries
     var columns = 0
     var names = arrayOfNulls<String>(InitialRowSize)
     var types = arrayOfNulls<PostgresType>(InitialRowSize)
@@ -49,6 +35,8 @@ class SimpleQuerySequenceMonitor : GuardedWireMonitor() {
     }
 
     override fun receivedComplete(info: String) {
+        // for multiple SQL statements in a single query this will be called for each statement
+        // while receivedReadyForQuery will be called when the whole batch is complete
     }
 
     override fun receivedReadyForQuery(transactionState: Byte) {
@@ -87,18 +75,30 @@ class SimpleQuerySequenceMonitor : GuardedWireMonitor() {
         datas[index] = bytes
     }
 
-    companion object {
+    // TODO: should a pool be per connection instead for locality and less contention?
+    companion object : DefaultPool<SimpleQuerySequenceMonitor>(16) {
         const val InitialRowSize = 16
+        
+        override fun produceInstance() = SimpleQuerySequenceMonitor()
+        override fun clearInstance(instance: SimpleQuerySequenceMonitor) = instance.apply { reset() }
     }
 }
 
-suspend fun <T> PostgresConnection.executeQueryAsync(
-    query: String,
-    consumer: (SimpleQuerySequenceMonitor) -> T
-): Deferred<T> {
+suspend fun PostgresConnection.executeQueryAsync(query: String): Deferred<String?> {
     sendSimpleQuery(query)
-    val receiver = SimpleQuerySequenceMonitor()
-    while (!receiver.complete)
-        input.receiveMessage(receiver)
-    return CompletableDeferred(consumer(receiver))
+    return receiveAsync { input ->
+        SimpleQuerySequenceMonitor.useInstance { receiver ->
+            while (!receiver.complete)
+                input.receiveMessage(receiver)
+
+            // Process result
+            repeat(receiver.columns) { index ->
+                val name = receiver.names[index]
+                val typeName = receiver.types[index]?.name
+                val bytes = receiver.datas[index]
+                println("$name: $typeName = ${bytes?.let { String(it) }}")
+            }
+            receiver.datas[1]?.let { String(it) }
+        }
+    }
 }
