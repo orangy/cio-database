@@ -2,34 +2,10 @@ package io.ktor.postgres
 
 interface PostgresWireMonitor {
     fun sentStartup(version: Int, parameters: Map<String, String>)
-    fun receivedAuthenticateMD5(salt: ByteArray)
-    fun receivedAuthenticateCleartext()
-    fun receivedAuthenticated()
-    fun receivedReadyForQuery(transactionState: Byte)
-    fun receivedBackendSessionData(pid: Int, secret: ByteArray)
-    fun receivedParameter(key: String, value: String)
-    fun receivedError(error: PostgresErrorException)
     fun sentTerminate()
     fun sentAuthenticatePassword()
     fun sentAuthenticateMD5()
     fun sentQuery(query: String)
-    fun receivedGeneric(type: String)
-    fun receivedComplete(info: String)
-    fun receivedDescription(count: Int)
-    fun receivedDescriptionColumn(
-        index: Int,
-        name: String,
-        tableOID: Int,
-        attributeID: Int,
-        typeOID: Int,
-        typeSize: Int,
-        typeMod: Int,
-        format: Int
-    )
-
-    fun receivedRow(count: Int)
-    fun receivedRowCell(index: Int, bytes: ByteArray?)
-    fun receivedEmptyResponse()
     fun sentParse(statementName: String, query: String, parametersTypeOIDs: IntArray)
     fun sentGeneric(type: String)
     fun sentBind(portalName: String, statementName: String)
@@ -37,12 +13,21 @@ interface PostgresWireMonitor {
     fun sentDescribePortal(portalName: String)
     fun sentDescribeStatement(statementName: String)
     fun sentSync()
-}
 
-class ConsolePostgresWireMonitor() : TextPostgresWireMonitor() {
-    override fun text(message: String) {
-        println(message)
-    }
+    fun receivedAuthenticateMD5(salt: ByteArray)
+    fun receivedAuthenticateCleartext()
+    fun receivedAuthenticated()
+    fun receivedReadyForQuery(transactionState: Byte)
+    fun receivedBackendSessionData(pid: Int, secret: ByteArray)
+    fun receivedParameter(key: String, value: String)
+    fun receivedError(error: PostgresErrorException)
+    fun receivedGeneric(type: String)
+    fun receivedComplete(info: String)
+    fun receivedDescription(count: Int)
+    fun receivedDescriptionColumn(index: Int, name: String, tableOID: Int, attributeID: Int, typeOID: Int, typeSize: Int, typeMod: Int, format: Int)
+    fun receivedRow(count: Int)
+    fun receivedRowCell(index: Int, bytes: ByteArray?)
+    fun receivedEmptyResponse()
 }
 
 abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
@@ -195,3 +180,10 @@ abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
         sent("SYNC")
     }
 }
+
+class ConsolePostgresWireMonitor() : TextPostgresWireMonitor() {
+    override fun text(message: String) {
+        println(message)
+    }
+}
+
