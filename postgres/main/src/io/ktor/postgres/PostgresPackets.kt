@@ -40,35 +40,4 @@ internal fun ByteReadPacket.readCString(charset: Charset = Charsets.UTF_8): Stri
 }.readText(charset)
 
 
-internal fun ByteReadPacket.readError(): PostgresErrorException {
-    var details: MutableMap<Char, String>? = null
-    var message: String? = null
-    var severity: String? = null
-
-    loop@ while (remaining > 0) {
-        val type = readByte().toChar()
-        when (type) {
-            'M' -> {
-                message = readCString()
-            }
-            'S' -> {
-                severity = readCString()
-            }
-            0.toChar() -> {
-                if (remaining != 0L)
-                    throw PostgresWireProtocolException("There are some remaining bytes in exception message: $remaining")
-                break@loop
-            }
-            else -> {
-                val text = readCString()
-                if (details == null)
-                    details = mutableMapOf()
-                details[type] = text
-
-            }
-        }
-    }
-
-    return PostgresErrorException(message ?: "No message", severity ?: "UNKNOWN", details)
-}
 

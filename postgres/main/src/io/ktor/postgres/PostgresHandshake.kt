@@ -42,15 +42,14 @@ suspend fun Socket.handshake(
                     receivedProperties[key] = value
                 }
                 BackendMessage.ERROR_RESPONSE -> {
-                    val error = payload.readError()
+                    val error = payload.receiveError()
                     monitor?.receivedError(error)
                     throw error
                 }
                 else -> throw PostgresWireProtocolException("Unexpected message $type during handshake.")
+            }
 
-            }!!
-
-            if (payload.remaining != 0L)
+            if (payload.remaining != 0L) // TODO: Should we check it? If protocol is extended with extra info, it will break it
                 throw PostgresWireProtocolException("Unexpected excessive ${payload.remaining} bytes in message $type.")
         }
     }
