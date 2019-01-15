@@ -26,13 +26,13 @@ internal suspend inline fun ByteReadChannel.readPostgresPacket(
 }
 
 
-internal fun Output.writeCString(value: String, charset: Charset = Charsets.UTF_8) {
+internal fun BytePacketBuilder.writeCString(value: String, charset: Charset = Charsets.UTF_8) {
     val data = value.toByteArray(charset)
     writeFully(data)
     writeByte(0)
 }
 
-internal fun Input.readCString(charset: Charset = Charsets.UTF_8): String = buildPacket {
+internal fun ByteReadPacket.readCString(charset: Charset = Charsets.UTF_8): String = buildPacket {
     readUntilDelimiter(0, this)
 
     // skip delimiter
@@ -69,6 +69,6 @@ internal fun ByteReadPacket.readError(): PostgresErrorException {
         }
     }
 
-    return PostgresErrorException(message ?: "No message", severity ?: "NO SEVERITY", details)
+    return PostgresErrorException(message ?: "No message", severity ?: "UNKNOWN", details)
 }
 

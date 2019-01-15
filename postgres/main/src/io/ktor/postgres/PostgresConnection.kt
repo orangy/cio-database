@@ -25,20 +25,19 @@ class PostgresConnection(
                     when (type) {
                         BackendMessage.ROW_DESCRIPTION -> {
                             val size = payload.readShort().toInt() and 0xffff
-                            monitor?.receivedDescription(size)
+                            monitor?.receivedRowDescription(size)
                             repeat(size) { index ->
                                 val name = payload.readCString()
                                 val tableOID = payload.readInt()
                                 val attributeID = payload.readShort().toInt() and 0xffff
-                                val typeOID =
-                                    payload.readInt() // https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
+                                val typeOID = payload.readInt() 
                                 val typeSize = payload.readShort().toInt() /* typeSize can be negative */
                                 val typeMod = payload.readInt()
                                 // The format code being used for the field. Currently will be zero (text) or one (binary). 
                                 // In a RowDescription returned from the statement variant of Describe, the format code is not yet known
                                 // and will always be zero.
                                 val format = payload.readShort().toInt()
-                                monitor?.receivedDescriptionColumn(
+                                monitor?.receivedRowDescriptionItem(
                                     index,
                                     name,
                                     tableOID,
@@ -50,13 +49,21 @@ class PostgresConnection(
                                 )
                             }
                         }
+                        BackendMessage.PARAMETER_DESCRIPTION -> {
+                            val size = payload.readShort().toInt() and 0xffff
+                            monitor?.receivedParameterDescription(size)
+                            repeat(size) { index ->
+                                val typeOID = payload.readInt()
+                                monitor?.receivedParameterDescriptionItem(index, typeOID)
+                            }
+                        }
                         BackendMessage.DATA_ROW -> {
                             val size = payload.readShort().toInt() and 0xffff
                             monitor?.receivedRow(size)
                             repeat(size) { index ->
                                 val cellSize = payload.readInt()
                                 val bytes = if (cellSize < 0) null else payload.readBytes(cellSize)
-                                monitor?.receivedRowCell(index, bytes)
+                                monitor?.receivedRowItem(index, bytes)
                             }
                         }
                         BackendMessage.EMPTY_QUERY_RESPONSE -> {
@@ -76,7 +83,7 @@ class PostgresConnection(
                             monitor?.receivedComplete(info)
                         }
                         BackendMessage.READY_FOR_QUERY -> {
-                            payload.receiveReady(monitor)
+                            payload.receiveReadyForQuery(monitor)
                         }
                         BackendMessage.ERROR_RESPONSE -> {
                             val error = payload.readError()

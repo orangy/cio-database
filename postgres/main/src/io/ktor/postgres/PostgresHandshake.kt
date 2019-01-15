@@ -21,16 +21,16 @@ suspend fun Socket.handshake(
         input.readPostgresPacket { type, payload ->
             when (type) {
                 BackendMessage.AUTHENTICATION_REQUEST -> {
-                    output.respondAuthenticate(payload, username, password, monitor)
+                    output.respondAuthenticationRequest(payload, username, password, monitor)
                 }
                 BackendMessage.READY_FOR_QUERY -> {
-                    val transactionState = payload.receiveReady(monitor)
+                    payload.receiveReadyForQuery(monitor)
                     return PostgresConnection(this, input, output, receivedProperties, monitor)
                 }
                 BackendMessage.BACKEND_KEY_DATA -> {
                     val backendPID = payload.readInt()
                     val backendSecret = payload.readBytes(4)
-                    monitor?.receivedBackendSessionData(backendPID, backendSecret)
+                    monitor?.receivedSessionBackendData(backendPID, backendSecret)
 
                     receivedProperties["PID"] = backendPID.toString()
                     receivedProperties["Secret"] = backendSecret.toString()
@@ -38,7 +38,7 @@ suspend fun Socket.handshake(
                 BackendMessage.PARAMETER_STATUS -> {
                     val key = payload.readCString()
                     val value = payload.readCString()
-                    monitor?.receivedParameter(key, value)
+                    monitor?.receivedSessionParameterStatus(key, value)
                     receivedProperties[key] = value
                 }
                 BackendMessage.ERROR_RESPONSE -> {
@@ -85,7 +85,7 @@ suspend fun ByteWriteChannel.sendStartup(
     monitor?.sentStartup(PostgresConnection.protocolVersion, sendParameters)
 }
 
-fun ByteReadPacket.receiveReady(monitor: PostgresWireMonitor?): Byte {
+fun ByteReadPacket.receiveReadyForQuery(monitor: PostgresWireMonitor?): Byte {
     val size = remaining.toInt()
     if (size != 1)
         throw PostgresWireProtocolException("READY_FOR_QUERY should have 1 byte of payload, got $size")

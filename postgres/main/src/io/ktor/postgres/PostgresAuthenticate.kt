@@ -4,7 +4,7 @@ import kotlinx.coroutines.io.*
 import kotlinx.io.core.*
 import java.security.*
 
-suspend fun ByteWriteChannel.respondAuthenticate(
+suspend fun ByteWriteChannel.respondAuthenticationRequest(
     payload: ByteReadPacket,
     username: String,
     password: String?,
