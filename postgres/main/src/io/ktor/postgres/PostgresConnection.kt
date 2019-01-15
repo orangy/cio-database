@@ -27,7 +27,7 @@ class PostgresConnection(
         socket.close()
     }
 
-    private val receiveActor = actor<(suspend (ByteReadChannel) -> Any?)>(start = CoroutineStart.LAZY) {
+    private val receiveActor = actor<(suspend (ByteReadChannel) -> Any?)>(capacity = 5, start = CoroutineStart.LAZY) {
         for (reader in channel) {
             reader(input)
         }
