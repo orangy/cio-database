@@ -230,14 +230,14 @@ private val rawTypes = listOf(
     ),
     PostgresRawType(
         oid = 26, array_type_oid = 1028,
-        descr = "object identifierPostegresType(oid), maximum 4 billion",
+        descr = "object identifier(oid), maximum 4 billion",
         typname = "oid", typlen = 4, typbyval = "t", typcategory = "N",
         typispreferred = true, typinput = "oidin", typoutput = "oidout",
         typreceive = "oidrecv", typsend = "oidsend", typalign = "i"
     ),
     PostgresRawType(
         oid = 27, array_type_oid = 1010,
-        descr = "PostegresType(block, offset), physical location of tuple",
+        descr = "(block, offset), physical location of tuple",
         typname = "tid", typlen = 6, typbyval = "f", typcategory = "U",
         typinput = "tidin", typoutput = "tidout", typreceive = "tidrecv",
         typsend = "tidsend", typalign = "s"
@@ -357,28 +357,28 @@ private val rawTypes = listOf(
 
     PostgresRawType(
         oid = 600, array_type_oid = 1017,
-        descr = "geometric point \"PostegresType(x, y)\"",
+        descr = "geometric point \"(x, y)\"",
         typname = "point", typlen = 16, typbyval = "f", typcategory = "G",
         typelem = "float8", typinput = "point_in", typoutput = "point_out",
         typreceive = "point_recv", typsend = "point_send", typalign = "d"
     ),
     PostgresRawType(
         oid = 601, array_type_oid = 1018,
-        descr = "geometric line segment \"PostegresType(pt1,pt2)\"",
+        descr = "geometric line segment \"(pt1,pt2)\"",
         typname = "lseg", typlen = 32, typbyval = "f", typcategory = "G",
         typelem = "point", typinput = "lseg_in", typoutput = "lseg_out",
         typreceive = "lseg_recv", typsend = "lseg_send", typalign = "d"
     ),
     PostgresRawType(
         oid = 602, array_type_oid = 1019,
-        descr = "geometric path \"PostegresType(pt1,...)\"",
+        descr = "geometric path \"(pt1,...)\"",
         typname = "path", typlen = -1, typbyval = "f", typcategory = "G",
         typinput = "path_in", typoutput = "path_out", typreceive = "path_recv",
         typsend = "path_send", typalign = "d", typstorage = "x"
     ),
     PostgresRawType(
         oid = 603, array_type_oid = 1020,
-        descr = "geometric box \"PostegresType(lower left,upper right)\"",
+        descr = "geometric box \"(lower left,upper right)\"",
         typname = "box", typlen = 32, typbyval = "f", typcategory = "G",
         typdelim = ";", typelem = "point", typinput = "box_in",
         typoutput = "box_out", typreceive = "box_recv", typsend = "box_send",
@@ -386,7 +386,7 @@ private val rawTypes = listOf(
     ),
     PostgresRawType(
         oid = 604, array_type_oid = 1027,
-        descr = "geometric polygon \"PostegresType(pt1,...)\"",
+        descr = "geometric polygon \"(pt1,...)\"",
         typname = "polygon", typlen = -1, typbyval = "f", typcategory = "G",
         typinput = "poly_in", typoutput = "poly_out", typreceive = "poly_recv",
         typsend = "poly_send", typalign = "d", typstorage = "x"
@@ -423,7 +423,7 @@ private val rawTypes = listOf(
     ),
     PostgresRawType(
         oid = 718, array_type_oid = 719,
-        descr = "geometric circle \"PostegresType(center,radius)\"",
+        descr = "geometric circle \"(center,radius)\"",
         typname = "circle", typlen = 24, typbyval = "f", typcategory = "G",
         typinput = "circle_in", typoutput = "circle_out",
         typreceive = "circle_recv", typsend = "circle_send", typalign = "d"
@@ -478,7 +478,7 @@ private val rawTypes = listOf(
     ),
     PostgresRawType(
         oid = 1042, array_type_oid = 1014,
-        descr = "charPostegresType(length), blank-padded string, fixed storage length",
+        descr = "char(length), blank-padded string, fixed storage length",
         typname = "bpchar", typlen = -1, typbyval = "f", typcategory = "S",
         typinput = "bpcharin", typoutput = "bpcharout", typreceive = "bpcharrecv",
         typsend = "bpcharsend", typmodin = "bpchartypmodin",
@@ -487,7 +487,7 @@ private val rawTypes = listOf(
     ),
     PostgresRawType(
         oid = 1043, array_type_oid = 1015,
-        descr = "varcharPostegresType(length), non-blank-padded string, variable storage length",
+        descr = "varchar(length), non-blank-padded string, variable storage length",
         typname = "varchar", typlen = -1, typbyval = "f", typcategory = "S",
         typinput = "varcharin", typoutput = "varcharout",
         typreceive = "varcharrecv", typsend = "varcharsend",
@@ -572,7 +572,7 @@ private val rawTypes = listOf(
 
     PostgresRawType(
         oid = 1700, array_type_oid = 1231,
-        descr = "numericPostegresType(precision, decimal), arbitrary precision number",
+        descr = "numeric(precision, decimal), arbitrary precision number",
         typname = "numeric", typlen = -1, typbyval = "f", typcategory = "N",
         typinput = "numeric_in", typoutput = "numeric_out",
         typreceive = "numeric_recv", typsend = "numeric_send",
@@ -582,7 +582,7 @@ private val rawTypes = listOf(
 
     PostgresRawType(
         oid = 1790, array_type_oid = 2201,
-        descr = "reference to cursor PostegresType(portal name)",
+        descr = "reference to cursor (portal name)",
         typname = "refcursor", typlen = -1, typbyval = "f", typcategory = "U",
         typinput = "textin", typoutput = "textout", typreceive = "textrecv",
         typsend = "textsend", typalign = "i", typstorage = "x"
@@ -592,7 +592,7 @@ private val rawTypes = listOf(
 
     PostgresRawType(
         oid = 2202, array_type_oid = 2207,
-        descr = "registered procedure PostegresType(with args)",
+        descr = "registered procedure (with args)",
         typname = "regprocedure", typlen = 4, typbyval = "t", typcategory = "N",
         typinput = "regprocedurein", typoutput = "regprocedureout",
         typreceive = "regprocedurerecv", typsend = "regproceduresend",
@@ -606,7 +606,7 @@ private val rawTypes = listOf(
     ),
     PostgresRawType(
         oid = 2204, array_type_oid = 2209,
-        descr = "registered operator PostegresType(with args)",
+        descr = "registered operator (with args)",
         typname = "regoperator", typlen = 4, typbyval = "t", typcategory = "N",
         typinput = "regoperatorin", typoutput = "regoperatorout",
         typreceive = "regoperatorrecv", typsend = "regoperatorsend",
@@ -759,7 +759,7 @@ private val rawTypes = listOf(
 // pseudo-types
 // types with typtype="p" represent various special cases in the type system.
 // These cannot be used to define table columns, but are valid as function
-// argument and result types PostegresType(if supported by the function"s implementation
+// argument and result types (if supported by the function"s implementation
 // language).
 // Note: cstring is a borderline case; it is still considered a pseudo-type,
 // but there is now support for it in records and arrays.  Perhaps we should
