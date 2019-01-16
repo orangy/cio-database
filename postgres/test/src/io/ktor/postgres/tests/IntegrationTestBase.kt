@@ -21,15 +21,18 @@ abstract class IntegrationTestBase {
 
     fun withConnection(monitor: PostgresWireMonitor? = null, body: suspend PostgresConnection.() -> Unit) {
         runBlocking {
-            PostgresConnection.create(
+            val connection = PostgresConnection.create(
                 address!!,
                 POSTGRES_SERVICE,
                 POSTGRES_USER,
                 POSTGRES_PASSWORD,
                 monitor
-            ).use {
-                it.body()
+            )
+            try {
+                connection.body()
                 delay(10)
+            } finally {
+                connection.close()
             }
         }
     }

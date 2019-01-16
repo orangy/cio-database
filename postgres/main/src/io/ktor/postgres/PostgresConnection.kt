@@ -1,3 +1,5 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package io.ktor.postgres
 
 import io.ktor.network.selector.*
@@ -15,15 +17,14 @@ class PostgresConnection(
     val output: ByteWriteChannel,
     val properties: Map<String, String>,
     val monitor: PostgresWireMonitor?
-) : CoroutineScope, AutoCloseable {
+) : CoroutineScope {
     override val coroutineContext: CoroutineContext = Dispatchers.Default + CoroutineName("ktor-postgres")
 
-    override fun close() {
-        runBlocking {
-            // TODO: decide on suspendability of close
-            output.writePostgresPacket(FrontendMessage.TERMINATE) {}
-        }
+    suspend fun close() {
+        output.writePostgresPacket(FrontendMessage.TERMINATE) {}
         monitor?.sentTerminate()
+        
+        @Suppress("BlockingMethodInNonBlockingContext")
         socket.close()
     }
 
