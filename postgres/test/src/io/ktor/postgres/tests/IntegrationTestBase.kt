@@ -19,7 +19,7 @@ abstract class IntegrationTestBase {
 
     @Rule
     @JvmField
-    val timeout = Timeout(10, TimeUnit.SECONDS)
+    val timeout = Timeout(10, TimeUnit.HOURS)
 
     fun withConnection(monitor: PostgresWireMonitor? = null, body: suspend PostgresConnection.() -> Unit) {
         val selectorManager = ActorSelectorManager(Dispatchers.IO)

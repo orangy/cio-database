@@ -19,13 +19,13 @@ suspend fun ByteReadChannel.receiveMessage(monitor: PostgresWireMonitor?) {
                 monitor?.receivedEmptyResponse()
             }
             BackendMessage.PARSE_COMPLETE -> {
-                monitor?.receivedGeneric(type.name)
+                monitor?.receivedParseComplete()
             }
             BackendMessage.BIND_COMPLETE -> {
-                monitor?.receivedGeneric(type.name)
+                monitor?.receivedBindComplete()
             }
             BackendMessage.CLOSE_COMPLETE -> {
-                monitor?.receivedGeneric(type.name)
+                monitor?.receivedCloseComplete()
             }
             BackendMessage.COMMAND_COMPLETE -> {
                 val info = payload.readCString()

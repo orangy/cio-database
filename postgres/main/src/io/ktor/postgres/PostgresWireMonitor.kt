@@ -30,6 +30,9 @@ interface PostgresWireMonitor {
     fun receivedEmptyResponse()
     fun receivedParameterDescription(count: Int)
     fun receivedParameterDescriptionItem(index: Int, typeOID: Int)
+    fun receivedParseComplete()
+    fun receivedBindComplete()
+    fun receivedCloseComplete()
 }
 
 abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
@@ -189,6 +192,18 @@ abstract class TextPostgresWireMonitor() : PostgresWireMonitor {
 
     override fun sentSync() {
         sent("SYNC")
+    }
+
+    override fun receivedParseComplete() {
+        received("PARSE_COMPLETE")
+    }
+
+    override fun receivedBindComplete() {
+        received("BIND_COMPLETE")
+    }
+
+    override fun receivedCloseComplete() {
+        received("CLOSE_COMPLETE")
     }
 }
 

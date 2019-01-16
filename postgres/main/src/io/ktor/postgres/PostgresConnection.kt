@@ -33,14 +33,20 @@ class PostgresConnection(
     // TODO: Change to CoroutineStart.LAZY when join bug is fixed
     private val receiveActor = actor<(suspend (ByteReadChannel) -> Any?)>(capacity = 5, start = CoroutineStart.DEFAULT) {
         for (reader in channel) {
-            reader(input)
+            try {
+                reader(input)
+            } catch (e: Exception) {
+                println(e.toString())
+                throw e
+            }
         }
     }
 
     suspend fun <T> receiveAsync(function: suspend (ByteReadChannel) -> T): Deferred<T> {
         val deferred = CompletableDeferred<T>()
         receiveActor.send {
-            deferred.complete(function(it))
+            val value = function(it)
+            deferred.complete(value)
         }
         return deferred
     }

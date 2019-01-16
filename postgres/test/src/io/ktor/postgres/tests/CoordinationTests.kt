@@ -3,17 +3,29 @@ package io.ktor.postgres.tests
 import io.ktor.postgres.*
 import kotlinx.coroutines.*
 import kotlinx.io.pool.*
-import org.junit.*
+import org.junit.Test
+import kotlin.test.*
 
 class CoordinationTests : IntegrationTestBase() {
     @Test
     fun simpleQuery() {
-        val monitor = ConsolePostgresWireMonitor()
-        withConnection(monitor) {
+        withConnection {
             val list = List(10) {
                 executeQueryAsync("SELECT $it, 'Item #$it'")
             }.awaitAll()
+            assertEquals(List(10) { "Item #$it" }, list)
+        }
+    }
+
+    @Test
+    fun preparedQuery() {
+        val monitor = ConsolePostgresWireMonitor()
+        withConnection(monitor) {
+            val list = List(10) {
+                executeQueryAsync("SELECT $1, 'Item #$2'", it, it.toString())
+            }.awaitAll()
             println(list)
+            assertEquals(List(10) { "Item #$it" }, list)
         }
     }
 }
@@ -76,10 +88,22 @@ class SimpleQuerySequenceMonitor : GuardedWireMonitor() {
         datas[index] = bytes
     }
 
+    override fun receivedParseComplete() {
+        // allow & ignore
+    }
+
+    override fun receivedBindComplete() {
+        // allow & ignore
+    }
+
+    override fun receivedCloseComplete() {
+        // allow & ignore
+    }
+
     // TODO: should a pool be per connection instead for locality and less contention?
     companion object : DefaultPool<SimpleQuerySequenceMonitor>(16) {
         const val InitialRowSize = 16
-        
+
         override fun produceInstance() = SimpleQuerySequenceMonitor()
         override fun clearInstance(instance: SimpleQuerySequenceMonitor) = instance.apply { reset() }
     }
@@ -101,5 +125,42 @@ suspend fun PostgresConnection.executeQueryAsync(query: String): Deferred<String
             }
             receiver.datas[1]?.let { String(it) }
         }
+    }
+}
+
+suspend fun PostgresConnection.executeQueryAsync(query: String, vararg parameters: Any?): Deferred<String?> {
+    sendParse("", query, parameters.map { getTypeOIDForObject(it) }.toIntArray())
+    sendBind("","", parameters.serialize())
+    sendDescribePortal("")
+    sendExecute("")
+    sendSync()
+    return receiveAsync { input ->
+        SimpleQuerySequenceMonitor.useInstance { receiver ->
+            while (!receiver.complete)
+                input.receiveMessage(receiver)
+
+            // Process result
+            repeat(receiver.columns) { index ->
+                val name = receiver.names[index]
+                val typeName = receiver.types[index]?.name
+                val bytes = receiver.datas[index]
+                println("$name: $typeName = ${bytes?.let { String(it) }}")
+            }
+            receiver.datas[1]?.let { String(it) }
+        }
+    }
+}
+
+private fun <T> Array<T>.serialize(): Array<ByteArray?> {
+    return map { it.toString().toByteArray() }.toTypedArray()
+}
+
+fun getTypeOIDForObject(value: Any?): Int {
+    if (value == null)
+        return PostgresType.getType("int4").oid
+    return when (value::class) {
+        Int::class -> PostgresType.getType("int4").oid
+        String::class -> PostgresType.getType("varchar").oid
+        else -> throw PostgresException("Can't map a type for $value")
     }
 }
