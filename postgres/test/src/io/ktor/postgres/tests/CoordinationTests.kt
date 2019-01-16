@@ -22,7 +22,7 @@ class CoordinationTests : IntegrationTestBase() {
         val monitor = ConsolePostgresWireMonitor()
         withConnection(monitor) {
             val list = List(10) {
-                executeQueryAsync("SELECT $1, 'Item #$2'", it, it.toString())
+                executeQueryAsync("SELECT $1, 'Item #' || \$2", it, it.toString())
             }.awaitAll()
             println(list)
             assertEquals(List(10) { "Item #$it" }, list)
@@ -86,6 +86,10 @@ class SimpleQuerySequenceMonitor : GuardedWireMonitor() {
 
     override fun receivedRowItem(index: Int, bytes: ByteArray?) {
         datas[index] = bytes
+    }
+
+    override fun receivedError(error: PostgresErrorException) {
+        throw error
     }
 
     override fun receivedParseComplete() {

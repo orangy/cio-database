@@ -1,6 +1,7 @@
 package io.ktor.postgres.tests
 
 import ch.qos.logback.classic.*
+import com.jayway.awaitility.*
 import com.palantir.docker.compose.*
 import com.palantir.docker.compose.configuration.*
 import com.palantir.docker.compose.connection.waiting.*
@@ -23,7 +24,7 @@ abstract class IntegrationTestBase {
 
     fun withConnection(monitor: PostgresWireMonitor? = null, body: suspend PostgresConnection.() -> Unit) {
         val selectorManager = ActorSelectorManager(Dispatchers.IO)
-        val job = GlobalScope.launch(Dispatchers.IO) {
+        val job = GlobalScope.async(Dispatchers.IO) {
             val connection = PostgresConnection.create(
                 selectorManager,
                 coroutineContext,
@@ -41,7 +42,7 @@ abstract class IntegrationTestBase {
             }
         }
         runBlocking {
-            job.join()
+            job.await()
         }
     }
 
@@ -53,7 +54,10 @@ abstract class IntegrationTestBase {
 
         var address: InetSocketAddress? = null
 
-
+        init {
+            Awaitility.doNotCatchUncaughtExceptionsByDefault()
+        }
+        
         @JvmField
         @ClassRule
         val dockerCompose = DockerComposeRule.builder()
