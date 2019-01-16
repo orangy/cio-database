@@ -3,8 +3,10 @@ package io.ktor.postgres
 import io.ktor.network.sockets.*
 import kotlinx.coroutines.io.*
 import kotlinx.io.core.*
+import kotlin.coroutines.*
 
 suspend fun Socket.handshake(
+    context: CoroutineContext,
     database: String,
     username: String,
     password: String?,
@@ -25,7 +27,14 @@ suspend fun Socket.handshake(
                 }
                 BackendMessage.READY_FOR_QUERY -> {
                     payload.receiveReadyForQuery(monitor)
-                    return PostgresConnection(this, input, output, receivedProperties, monitor)
+                    return PostgresConnection(
+                        context,
+                        this@handshake,
+                        input,
+                        output,
+                        receivedProperties,
+                        monitor
+                    )
                 }
                 BackendMessage.BACKEND_KEY_DATA -> {
                     val backendPID = payload.readInt()

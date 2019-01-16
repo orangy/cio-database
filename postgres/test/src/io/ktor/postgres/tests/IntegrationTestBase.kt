@@ -4,8 +4,10 @@ import ch.qos.logback.classic.*
 import com.palantir.docker.compose.*
 import com.palantir.docker.compose.configuration.*
 import com.palantir.docker.compose.connection.waiting.*
+import io.ktor.network.selector.*
 import io.ktor.postgres.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.debug.*
 import org.junit.*
 import org.junit.rules.*
 import org.slf4j.*
@@ -17,11 +19,14 @@ abstract class IntegrationTestBase {
 
     @Rule
     @JvmField
-    val timeout = Timeout(10, TimeUnit.HOURS)
+    val timeout = Timeout(10, TimeUnit.SECONDS)
 
     fun withConnection(monitor: PostgresWireMonitor? = null, body: suspend PostgresConnection.() -> Unit) {
-        runBlocking {
+        val selectorManager = ActorSelectorManager(Dispatchers.IO)
+        val job = GlobalScope.launch(Dispatchers.IO) {
             val connection = PostgresConnection.create(
+                selectorManager,
+                coroutineContext,
                 address!!,
                 POSTGRES_SERVICE,
                 POSTGRES_USER,
@@ -30,10 +35,13 @@ abstract class IntegrationTestBase {
             )
             try {
                 connection.body()
-                delay(10)
             } finally {
                 connection.close()
+                selectorManager.close()
             }
+        }
+        runBlocking {
+            job.join()
         }
     }
 
@@ -45,11 +53,13 @@ abstract class IntegrationTestBase {
 
         var address: InetSocketAddress? = null
 
+
         @JvmField
         @ClassRule
         val dockerCompose = DockerComposeRule.builder()
             .file("test/resources/compose-postgres.yml") // TODO: point to processed resources folder in Build folder
-            .waitingForService(POSTGRES_SERVICE,
+            .waitingForService(
+                POSTGRES_SERVICE,
                 HealthChecks.toHaveAllPortsOpen()
             )
             .shutdownStrategy(ShutdownStrategy.GRACEFUL)
@@ -68,11 +78,13 @@ abstract class IntegrationTestBase {
                 .port(POSTGRES_PORT)!!
 
             address = InetSocketAddress(postgres.ip, postgres.externalPort)
+            DebugProbes.install()
         }
 
         @AfterClass
         @JvmStatic
         fun cleanup() {
+            DebugProbes.uninstall()
             dockerCompose.containers().container(POSTGRES_SERVICE).stop()
             address = null
         }

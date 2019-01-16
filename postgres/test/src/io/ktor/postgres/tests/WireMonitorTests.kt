@@ -1,6 +1,7 @@
 package io.ktor.postgres.tests
 
 import io.ktor.postgres.*
+import kotlinx.coroutines.*
 import org.junit.*
 import org.slf4j.*
 
@@ -10,7 +11,9 @@ class WireMonitorTests : IntegrationTestBase() {
     fun loggerMonitor() {
         val logger = LoggerFactory.getLogger("PROTOCOL")
         val monitor = LoggerPostgresWireMonitor(logger)
-        withConnection(monitor) {}
+        withConnection(monitor) {
+            
+        }
     }
 
     @Test

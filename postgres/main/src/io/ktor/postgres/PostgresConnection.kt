@@ -12,13 +12,14 @@ import java.net.*
 import kotlin.coroutines.*
 
 class PostgresConnection(
+    parentCoroutineContext: CoroutineContext,
     val socket: Socket,
     val input: ByteReadChannel,
     val output: ByteWriteChannel,
     val properties: Map<String, String>,
     val monitor: PostgresWireMonitor?
 ) : CoroutineScope {
-    override val coroutineContext: CoroutineContext = Dispatchers.Default + CoroutineName("ktor-postgres")
+    override val coroutineContext: CoroutineContext = parentCoroutineContext + CoroutineName("postgres-context")
 
     suspend fun close() {
         output.writePostgresPacket(FrontendMessage.TERMINATE) {}
@@ -26,9 +27,11 @@ class PostgresConnection(
         
         @Suppress("BlockingMethodInNonBlockingContext")
         socket.close()
+        receiveActor.close()
     }
 
-    private val receiveActor = actor<(suspend (ByteReadChannel) -> Any?)>(capacity = 5, start = CoroutineStart.LAZY) {
+    // TODO: Change to CoroutineStart.LAZY when join bug is fixed
+    private val receiveActor = actor<(suspend (ByteReadChannel) -> Any?)>(capacity = 5, start = CoroutineStart.DEFAULT) {
         for (reader in channel) {
             reader(input)
         }
@@ -46,6 +49,8 @@ class PostgresConnection(
         internal const val protocolVersion = 0x0003_0000
 
         suspend fun create(
+            selectorManager: SelectorManager,
+            context: CoroutineContext,
             address: InetSocketAddress,
             database: String,
             username: String,
@@ -53,9 +58,8 @@ class PostgresConnection(
             monitor: PostgresWireMonitor? = null,
             parameters: Map<String, String> = mapOf()
         ): PostgresConnection {
-            val selectorManager = ActorSelectorManager(coroutineContext + Job())
             val socket = aSocket(selectorManager).tcp().tcpNoDelay().connect(address)
-            return socket.handshake(database, username, password, parameters, monitor)
+            return socket.handshake(context, database, username, password, parameters, monitor)
         }
     }
 }

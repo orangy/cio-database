@@ -1,6 +1,5 @@
 package io.ktor.postgres.tests
 
-import io.ktor.network.sockets.*
 import io.ktor.postgres.*
 import kotlinx.coroutines.*
 import org.junit.Test
@@ -8,19 +7,21 @@ import kotlin.test.*
 
 class ProtocolTests : IntegrationTestBase() {
 
-    fun withReceivingConnection(monitor: PostgresWireMonitor? = null, body: suspend PostgresConnection.() -> Unit) =
+    private fun withReceivingConnection(monitor: TestPostgresWireMonitor, body: suspend PostgresConnection.() -> Unit) =
         withConnection(monitor) {
-            launch {
-                while (!socket.isClosed) {
+            val receiveJob = launch {
+                while (!monitor.emptyQueryReceived) {
                     input.receiveMessage(monitor)
                 }
             }
             body()
+            sendSimpleQuery("");
+            receiveJob.join()
         }
 
     @Test
     fun connectionProperties() {
-        val monitor = TestPostgresWireMonitor()
+        val monitor = TestPostgresWireMonitor(false)
         withReceivingConnection(monitor) {
             assertEquals("UTF8", properties["client_encoding"])
             assertEquals("UTC", properties["TimeZone"])
