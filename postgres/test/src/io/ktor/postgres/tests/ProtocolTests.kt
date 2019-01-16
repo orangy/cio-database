@@ -19,6 +19,15 @@ class ProtocolTests : IntegrationTestBase() {
         }
 
     @Test
+    fun connectionProperties() {
+        val monitor = TestPostgresWireMonitor()
+        withReceivingConnection(monitor) {
+            assertEquals("UTF8", properties["client_encoding"])
+            assertEquals("UTC", properties["TimeZone"])
+        }
+    }
+    
+    @Test
     fun simpleQueryInt() {
         val monitor = TestPostgresWireMonitor()
         withReceivingConnection(monitor) {
